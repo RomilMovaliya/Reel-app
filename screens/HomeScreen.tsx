@@ -14,6 +14,7 @@ interface VideoWrapper {
 const VideoWrapper = ({ data, allVideos, visibleIndex }: VideoWrapper) => {
     const { index, item } = data;
     const [isPaused, setIsPaused] = useState(false);
+    const [isloading, setIsLoading] = useState(false);
     const videoRef = useRef<VideoRef>(null);
     const isVisible = visibleIndex === index;
 
@@ -52,6 +53,9 @@ const VideoWrapper = ({ data, allVideos, visibleIndex }: VideoWrapper) => {
                     }}
                     resizeMode='cover'
                     paused={paused}
+                    onLoadStart={() => setIsLoading(true)}
+                    onLoad={() => setIsLoading(false)}
+                    onBuffer={({ isBuffering }) => setIsLoading(isBuffering)}
                     repeat={true}
                 />
 
@@ -65,8 +69,22 @@ const VideoWrapper = ({ data, allVideos, visibleIndex }: VideoWrapper) => {
                 }}>
 
                 </Text>
-
             </View>
+
+            {isloading && (
+                <View style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: [{ translateX: -50 }, { translateY: -50 }],
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    padding: 10,
+                    borderRadius: 10
+                }}>
+                    <Text style={{ color: 'white' }}>Loading...</Text>
+                </View>
+            )}
+
         </Pressable>
 
     )
