@@ -1,129 +1,62 @@
-import { Dimensions, FlatList, ListRenderItemInfo, Pressable, StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native'
-import React, { useEffect, useRef, useState } from 'react'
-import { videos } from '../assets/data';
-import Video, { VideoRef } from 'react-native-video';
+import { FlatList, StyleSheet, Text, View, Dimensions } from 'react-native'
+import React, { useRef, useState } from 'react'
+import { videos } from '../assets/data'
+import VideoWrapper from '../componets/VideoWrapper'
 
+const { height: screenHeight } = Dimensions.get('window')
 
-const { height, width } = Dimensions.get('window')
-interface VideoWrapper {
-    data: ListRenderItemInfo<string>,
-    allVideos: string[],
-    visibleIndex: number
-}
-
-const VideoWrapper = ({ data, allVideos, visibleIndex }: VideoWrapper) => {
-    const { index, item } = data;
-    const [isPaused, setIsPaused] = useState(false);
-    const [isloading, setIsLoading] = useState(false);
-    const videoRef = useRef<VideoRef>(null);
-    const isVisible = visibleIndex === index;
-
-    useEffect(() => {
-        if (isVisible) {
-            videoRef.current?.seek(0); // Auto-reset when it becomes visible
-            setIsPaused(false); // Auto-play when visible
-        } else {
-            setIsPaused(true); // Pause when not visible
-        }
-    }, [visibleIndex]);
-
-    const paused = isVisible ? isPaused : true;
-
-    return (
-        <Pressable
-            style={{
-                height,
-                width,
-                backgroundColor: 'black',
-            }}
-            onLongPress={() => isVisible && setIsPaused(true)}
-            onPressOut={() => isVisible && setIsPaused(false)}
-        >
-            <View style={{
-                height,
-                width,
-                backgroundColor: index % 2 === 0 ? 'red' : 'pink'
-            }}>
-                <Video
-                    ref={videoRef}
-                    source={{ uri: allVideos[index] }}
-                    style={{
-                        height,
-                        width
-                    }}
-                    resizeMode='cover'
-                    paused={paused}
-                    onLoadStart={() => setIsLoading(true)}
-                    onLoad={() => setIsLoading(false)}
-                    onBuffer={({ isBuffering }) => setIsLoading(isBuffering)}
-                    repeat={true}
-                />
-
-                <Text style={{
-                    position: 'absolute',
-                    textAlign: 'center',
-                    color: 'white',
-                    fontSize: 24,
-                    width,
-                    height,
-                }}>
-
-                </Text>
-            </View>
-
-            {isloading && (
-                <View style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: [{ translateX: -50 }, { translateY: -50 }],
-                    backgroundColor: 'rgba(0,0,0,0.5)',
-                    padding: 10,
-                    borderRadius: 10
-                }}>
-                    <Text style={{ color: 'white' }}>Loading...</Text>
-                </View>
-            )}
-
-        </Pressable>
-
-    )
-}
 const HomeScreen = () => {
-    const [allVideos, setAllVideos] = useState(videos);
-    const [visibleIndex, setVisibleIndex] = useState(0);
+    const [currentIndex, setCurrentIndex] = useState(0)
+    const flatListRef = useRef(null)
 
-    const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
-        if (viewableItems.length > 0) {
-            const newIndex = Number(viewableItems[0].index);
-            setVisibleIndex(newIndex);
+    const onViewableItemsChanged = ({ viewableItems }: { viewableItems: Array<{ index: number | null }> }) => {
+        if (viewableItems.length > 0 && viewableItems[0].index !== null) {
+            setCurrentIndex(viewableItems[0].index)
         }
-    }).current;
-    return (
-        <View style={{
-            flex: 1,
-            backgroundColor: 'black'
-        }}>
-            <FlatList
-                pagingEnabled
-                initialNumToRender={1}
-                showsVerticalScrollIndicator={false}
-                onViewableItemsChanged={onViewableItemsChanged}
-                data={allVideos}
-                renderItem={(data) => {
-                    return <VideoWrapper
-                        data={data}
-                        allVideos={allVideos}
-                        visibleIndex={visibleIndex}
-                    />
-                }}
+    }
 
+    const viewabilityConfig = {
+        itemVisiblePercentThreshold: 50
+    }
+
+    return (
+        <View style={styles.container}>
+            <FlatList
+                ref={flatListRef}
+                keyExtractor={(item) => item.id.toString()}
+                data={videos}
+                renderItem={({ item, index }) => {
+                    return (
+                        <VideoWrapper
+                            data={item}
+                            isActive={index === currentIndex}
+                            index={index}
+                        />
+                    )
+                }}
+                pagingEnabled
+                horizontal={false}
+                showsVerticalScrollIndicator={false}
+                snapToInterval={screenHeight}
+                snapToAlignment="start"
+                decelerationRate="fast"
+                onViewableItemsChanged={onViewableItemsChanged}
+                viewabilityConfig={viewabilityConfig}
+                getItemLayout={(data, index) => ({
+                    length: screenHeight,
+                    offset: screenHeight * index,
+                    index,
+                })}
             />
         </View>
-
     )
 }
 
 export default HomeScreen
 
-const styles = StyleSheet.create({})
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#000',
+    }
+})
