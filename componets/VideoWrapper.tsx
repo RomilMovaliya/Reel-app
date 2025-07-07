@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View, Dimensions, TouchableOpacity, PanResponder, AppStateStatus, AppState } from 'react-native'
-import React, { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { VideoView, useVideoPlayer } from 'expo-video'
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window')
@@ -11,12 +11,9 @@ interface VideoWrapperProps {
 }
 
 const VideoWrapper: React.FC<VideoWrapperProps> = ({ data, isActive, index }) => {
-    const [isPlaying, setIsPlaying] = useState(false)
-    const [isPausedByLongPress, setIsPausedByLongPress] = useState(false)
+
     const videoRef = useRef(null)
-    const longPressTimer = useRef<NodeJS.Timeout | null>(null)
-    const appState = useRef(AppState.currentState)
-    const [wasPlayingBeforeBackground, setWasPlayingBeforeBackground] = useState(false)
+    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
     const player = useVideoPlayer(data.uri || data.url, (player) => {
         player.loop = true
@@ -26,48 +23,38 @@ const VideoWrapper: React.FC<VideoWrapperProps> = ({ data, isActive, index }) =>
     // Handle app state changes
     useEffect(() => {
         const handleAppStateChange = (nextAppState: AppStateStatus) => {
-            if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+            if (nextAppState === 'active') {
                 // App has come to the foreground
-                if (isActive && wasPlayingBeforeBackground) {
-                    // Resume video if it was playing before going to background
+                if (isActive) {
                     player.play()
-                    setIsPlaying(true)
                 }
-            } else if (appState.current === 'active' && nextAppState.match(/inactive|background/)) {
+            } else if (nextAppState.match(/inactive|background/)) {
                 // App is going to the background
-                if (isActive && isPlaying) {
-                    setWasPlayingBeforeBackground(true)
-                } else {
-                    setWasPlayingBeforeBackground(false)
+                if (isActive) {
+                    player.pause()
                 }
             }
-            appState.current = nextAppState
         }
-
         const subscription = AppState.addEventListener('change', handleAppStateChange)
-
         return () => {
             subscription?.remove()
         }
-    }, [isActive, isPlaying, wasPlayingBeforeBackground, player])
+    }, [isActive, player]);
+
     useEffect(() => {
         if (isActive) {
             // Reset video to beginning when it becomes active
             player.currentTime = 0.5
             player.play()
-            setIsPlaying(true)
         } else {
             player.pause()
-            setIsPlaying(false)
         }
-    }, [isActive, player])
+    }, [isActive, player]);
 
     const handlePressIn = () => {
         longPressTimer.current = setTimeout(() => {
-            if (isActive && isPlaying) {
+            if (isActive) {
                 player.pause()
-                setIsPlaying(false)
-                setIsPausedByLongPress(true)
             }
         }, 200) // 200ms delay for long press
     }
@@ -77,12 +64,7 @@ const VideoWrapper: React.FC<VideoWrapperProps> = ({ data, isActive, index }) =>
             clearTimeout(longPressTimer.current)
             longPressTimer.current = null
         }
-
-        if (isPausedByLongPress) {
-            player.play()
-            setIsPlaying(true)
-            setIsPausedByLongPress(false)
-        }
+        player.play()
     }
 
     return (
