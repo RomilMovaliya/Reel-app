@@ -11,6 +11,11 @@
           "supportsPictureInPicture": true
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "32a804d0-e8fe-444d-955f-bd50a5188760"
+      }
+    }
   }
 }
